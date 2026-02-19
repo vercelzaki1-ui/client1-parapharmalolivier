@@ -1,29 +1,11 @@
 import { NextResponse, NextRequest } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { getSupabaseAdminClient, getSupabaseServerClient } from "@/lib/supabase/server"
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-            } catch {
-              // Ignored
-            }
-          },
-        },
-      }
-    )
+    const supabase = await getSupabaseServerClient()
+    const adminSupabase = await getSupabaseAdminClient()
 
     // Check if user is admin
     const {
@@ -48,7 +30,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Update brand
-    const { data: brand, error } = await supabase
+    const { data: brand, error } = await adminSupabase
       .from("brands")
       .update({
         name,
@@ -76,25 +58,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-            } catch {
-              // Ignored
-            }
-          },
-        },
-      }
-    )
+    const supabase = await getSupabaseServerClient()
+    const adminSupabase = await getSupabaseAdminClient()
 
     // Check if user is admin
     const {
@@ -112,7 +77,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     // Delete brand
-    const { error } = await supabase.from("brands").delete().eq("id", id)
+    const { error } = await adminSupabase.from("brands").delete().eq("id", id)
 
     if (error) {
       console.error("Error deleting brand:", error)

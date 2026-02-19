@@ -28,9 +28,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 import type { Category } from "@/lib/types"
 
 export function CategoriesPageContent() {
+  const { toast } = useToast()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
@@ -106,35 +108,64 @@ export function CategoriesPageContent() {
     }
 
     try {
+      let response: Response
+
       if (editingCategory) {
-        await fetch(`/api/admin/categories/${editingCategory.id}`, {
+        response = await fetch(`/api/admin/categories/${editingCategory.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         })
       } else {
-        await fetch("/api/admin/categories", {
+        response = await fetch("/api/admin/categories", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         })
       }
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Échec de l'enregistrement")
+      }
+
       await fetchCategories()
       setIsAddDialogOpen(false)
       resetForm()
+      toast({
+        title: "Succès",
+        description: editingCategory ? "Catégorie mise à jour" : "Catégorie créée",
+      })
     } catch (error) {
       console.error("Error saving category:", error)
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Impossible d'enregistrer la catégorie",
+        variant: "destructive",
+      })
     }
   }
 
   const handleDelete = async (categoryId: string) => {
     try {
-      await fetch(`/api/admin/categories/${categoryId}`, {
+      const response = await fetch(`/api/admin/categories/${categoryId}`, {
         method: "DELETE",
       })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Échec de la suppression")
+      }
+
       await fetchCategories()
+      toast({ title: "Succès", description: "Catégorie supprimée" })
     } catch (error) {
       console.error("Error deleting category:", error)
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Impossible de supprimer la catégorie",
+        variant: "destructive",
+      })
     }
   }
 
